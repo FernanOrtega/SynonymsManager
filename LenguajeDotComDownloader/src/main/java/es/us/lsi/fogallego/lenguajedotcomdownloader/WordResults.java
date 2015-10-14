@@ -4,27 +4,27 @@ import java.util.List;
 
 public class WordResults {
 
-    private Word word;
+    private String word;
 
     private List<SynonymSense> lstSynonymSense;
 
-    private List<Trio<String,String,String>> lstAntonyms;
+    private List<AntonymSense> lstAntonyms;
 
     public WordResults() {
         super();
     }
 
-    public WordResults(Word word, List<SynonymSense> lstSynonymSense, List<Trio<String, String, String>> lstAntonyms) {
+    public WordResults(String word, List<SynonymSense> lstSynonymSense, List<AntonymSense> lstAntonyms) {
         this.word = word;
         this.lstSynonymSense = lstSynonymSense;
         this.lstAntonyms = lstAntonyms;
     }
 
-    public Word getWord() {
+    public String getWord() {
         return word;
     }
 
-    public void setWord(Word word) {
+    public void setWord(String word) {
         this.word = word;
     }
 
@@ -36,11 +36,11 @@ public class WordResults {
         this.lstSynonymSense = lstSynonymSense;
     }
 
-    public List<Trio<String, String, String>> getLstAntonyms() {
+    public List<AntonymSense> getLstAntonyms() {
         return lstAntonyms;
     }
 
-    public void setLstAntonyms(List<Trio<String, String, String>> lstAntonyms) {
+    public void setLstAntonyms(List<AntonymSense> lstAntonyms) {
         this.lstAntonyms = lstAntonyms;
     }
 }

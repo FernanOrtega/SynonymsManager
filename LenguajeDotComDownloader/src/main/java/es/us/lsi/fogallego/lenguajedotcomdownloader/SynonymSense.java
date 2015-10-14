@@ -6,7 +6,9 @@ public class SynonymSense {
 
     private String posTag;
 
-    private List<Word> lstSynonyms;
+    private String lemma;
+
+    private List<String> lstSynonyms;
 
     public String getPosTag() {
         return posTag;
@@ -16,11 +18,19 @@ public class SynonymSense {
         this.posTag = posTag;
     }
 
-    public List<Word> getLstSynonyms() {
+    public List<String> getLstSynonyms() {
         return lstSynonyms;
     }
 
-    public void setLstSynonyms(List<Word> lstSynonyms) {
+    public void setLstSynonyms(List<String> lstSynonyms) {
         this.lstSynonyms = lstSynonyms;
+    }
+
+    public String getLemma() {
+        return lemma;
+    }
+
+    public void setLemma(String lemma) {
+        this.lemma = lemma;
     }
 }
