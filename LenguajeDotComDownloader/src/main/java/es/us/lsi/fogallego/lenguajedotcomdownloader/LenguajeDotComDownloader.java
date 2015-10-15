@@ -32,15 +32,15 @@ public class LenguajeDotComDownloader {
     // Downloader
     private static final String BASE_URL = "http://lenguaje.com/cgi-bin/Thesauro.exe?edition_field=";
     private static final int DEFAULT_BATCH = 50;
-    private static final String HTML_FOLDER = "C:\\lenguaje.com\\";
+    private static final String HTML_FOLDER = "D:\\lenguaje.com\\";
 
     // Neo4j
-    private static final String NEO4J_DB_PATH = "C:\\Users\\fogallego\\Documents\\Neo4j\\semanticdb.graphdb";
+    private static final String NEO4J_DB_PATH = "C:\\Users\\forte\\Documents\\Neo4j\\test.graphdb";
     private static final String QUERY_GET_PRIORITY_NODES = "match(w:WORD) WHERE w.priority > 1 RETURN w ORDER BY w.priority DESC LIMIT {numLimit}";
     private static final String QUERY_MERGE_NEW_NODES = "MERGE(w:WORD {lemma:{lemmaStr}}) ON CREATE SET w.priority = {priority} return w";
     private static final int NEW_WORDS_PRIORITY = 10;
     public static final int MILLIS_SLEEP_AFTER_ERROR = 30000;
-    public static final int MILLIS_SLEEP_AFTER_DOWNLOAD = 5000;
+    public static final int MILLIS_SLEEP_AFTER_DOWNLOAD = 10;
     private static GraphDatabaseService graphDb;
 
     public static void main(String[] args) {
@@ -77,34 +77,67 @@ public class LenguajeDotComDownloader {
         List<SynonymSense> lstSynonymSense = wordResults.getLstSynonymSense();
         try (Transaction tx = graphDb.beginTx()) {
 
+            Long tInit = System.currentTimeMillis();
             org.neo4j.graphdb.Node mainWordNode = graphDb.findNode(OwnLabels.WORD, "lemma", wordResults.getWord());
+//            System.out.println("--- time finding main word: "+(System.currentTimeMillis() - tInit));
 
             for (SynonymSense sense : lstSynonymSense) {
+//                tInit = System.currentTimeMillis();
                 org.neo4j.graphdb.Node senseSynonymsNode = graphDb.createNode(OwnLabels.SYNONYM_SENSE);
                 senseSynonymsNode.setProperty("posTag", sense.getPosTag());
+//                System.out.println("--- time creating sensesynm_node: " + (System.currentTimeMillis() - tInit));
+
                 // Relationship with the mainWord
+//                tInit = System.currentTimeMillis();
                 Relationship mainRelationship = senseSynonymsNode.createRelationshipTo(mainWordNode, OwnRelationships.SYNONYM);
                 mainRelationship.setProperty("lemma", sense.getLemma());
+//                System.out.println("--- time creating mainRelationship: " + (System.currentTimeMillis() - tInit));
+
+                tInit = System.currentTimeMillis();
                 sense.getLstSynonyms().forEach(s -> {
                     // Creating new nodes if no exists with default priority
+//                    System.out.println("------ "+s);
+//                    long tInitAux = System.currentTimeMillis();
                     graphDb.execute(QUERY_MERGE_NEW_NODES, map("lemmaStr", s, "priority", NEW_WORDS_PRIORITY));
+//                    System.out.println("------ time executing QUERY_MERGE_NEW_NODES: " + (System.currentTimeMillis() - tInitAux));
+
+//                    tInitAux = System.currentTimeMillis();
                     org.neo4j.graphdb.Node wordNode = graphDb.findNode(OwnLabels.WORD, "lemma", s);
+//                    System.out.println("------ time finding new word node: " + (System.currentTimeMillis() - tInitAux));
+
                     // Creating relations
+//                    tInitAux = System.currentTimeMillis();
                     senseSynonymsNode.createRelationshipTo(wordNode, OwnRelationships.SYNONYM);
+//                    System.out.println("------ time creation relationship with new word node: " + (System.currentTimeMillis() - tInitAux));
                 });
+                System.out.println("---time creating all synonyms relationships: " + (System.currentTimeMillis() - tInit));
+                System.out.println();
             }
 
             for (AntonymSense antonymSense : wordResults.getLstAntonyms()) {
+
+//                System.out.println("------ "+antonymSense.getAntonym());
+//                tInit = System.currentTimeMillis();
                 org.neo4j.graphdb.Node senseAntonymsNode = graphDb.createNode(OwnLabels.ANTONYM_SENSE);
                 senseAntonymsNode.setProperty("posTag", antonymSense.getPosTag());
+//                System.out.println("------ time creating antonymsense node: " + (System.currentTimeMillis() - tInit));
 
+//                long tInitAux = System.currentTimeMillis();
                 graphDb.execute(QUERY_MERGE_NEW_NODES, map("lemmaStr", antonymSense.getAntonym(), "priority", NEW_WORDS_PRIORITY));
-                org.neo4j.graphdb.Node wordNode = graphDb.findNode(OwnLabels.WORD, "lemma", antonymSense.getAntonym());
+//                System.out.println("------ time executing QUERY_MERGE_NEW_NODES: " + (System.currentTimeMillis() - tInitAux));
 
+//                tInitAux = System.currentTimeMillis();
+                org.neo4j.graphdb.Node wordNode = graphDb.findNode(OwnLabels.WORD, "lemma", antonymSense.getAntonym());
+//                System.out.println("------ time finding new word node: " + (System.currentTimeMillis() - tInitAux));
+
+//                tInitAux = System.currentTimeMillis();
                 Relationship mainRelationship = senseAntonymsNode.createRelationshipTo(mainWordNode, OwnRelationships.ANTONYM);
                 mainRelationship.setProperty("lemma", antonymSense.getLemma());
+//                System.out.println("------ time creation relationship with main word: " + (System.currentTimeMillis() - tInitAux));
 
+//                tInitAux = System.currentTimeMillis();
                 senseAntonymsNode.createRelationshipTo(wordNode, OwnRelationships.ANTONYM);
+//                System.out.println("------ time creation relationship with new word node: " + (System.currentTimeMillis() - tInitAux));
 
             }
             mainWordNode.setProperty("priority", 0);
