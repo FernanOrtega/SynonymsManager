@@ -32,24 +32,27 @@ public class LenguajeDotComDownloader {
     // Downloader
     private static final String BASE_URL = "http://lenguaje.com/cgi-bin/Thesauro.exe?edition_field=";
     private static final int DEFAULT_BATCH = 50;
-    private static final String HTML_FOLDER = "D:\\lenguaje.com\\";
+    private static final String HTML_FOLDER = "C:\\lenguaje.com\\";
 
     // Neo4j
+    private static final String NEO4J_DB_PATH = "C:\\Users\\fogallego\\Documents\\Neo4j\\semanticdb.graphdb";
     private static final String QUERY_GET_PRIORITY_NODES = "match(w:WORD) WHERE w.priority > 1 RETURN w ORDER BY w.priority DESC LIMIT {numLimit}";
     private static final String QUERY_MERGE_NEW_NODES = "MERGE(w:WORD {lemma:{lemmaStr}}) ON CREATE SET w.priority = {priority} return w";
     private static final int NEW_WORDS_PRIORITY = 10;
+    public static final int MILLIS_SLEEP_AFTER_ERROR = 30000;
+    public static final int MILLIS_SLEEP_AFTER_DOWNLOAD = 5000;
     private static GraphDatabaseService graphDb;
 
     public static void main(String[] args) {
 
-        if (args.length != 1) {
-            System.err.println("Usage: <db_path>");
-            System.exit(0);
-        }
+//        if (args.length != 1) {
+//            System.err.println("Usage: <db_path>");
+//            System.exit(0);
+//        }
 
         System.out.println("Starting downloader of Lenguaje.com");
 
-        graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder( args[0] )
+        graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(NEO4J_DB_PATH)
                 .setConfig( GraphDatabaseSettings.pagecache_memory, "1024M" )
                 .setConfig( GraphDatabaseSettings.string_block_size, "60" )
                 .setConfig(GraphDatabaseSettings.array_block_size, "300")
@@ -151,14 +154,14 @@ public class LenguajeDotComDownloader {
             try {
                 wordResults = downloadHook(word);
                 try {
-                    Thread.sleep(1000);
+                    Thread.sleep(MILLIS_SLEEP_AFTER_DOWNLOAD);
                 } catch (InterruptedException e1) {
                     System.err.println("Interrupted thread!!");
                 }
             } catch (IOException e) {
                 System.err.println("Error downloading synonyms for word: "+word);
                 try {
-                    Thread.sleep(10000);
+                    Thread.sleep(MILLIS_SLEEP_AFTER_ERROR);
                 } catch (InterruptedException e1) {
                     System.err.println("Interrupted thread!!");
                 }
