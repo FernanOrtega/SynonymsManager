@@ -7,10 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.factory.GraphDatabaseFactory;
 import org.neo4j.graphdb.factory.GraphDatabaseSettings;
 import org.neo4j.kernel.impl.core.NodeProxy;
@@ -35,7 +32,8 @@ public class LenguajeDotComDownloader {
     private static final String HTML_FOLDER = "D:\\lenguaje.com\\";
 
     // Neo4j
-    private static final String NEO4J_DB_PATH = "C:\\Users\\forte\\Documents\\Neo4j\\test.graphdb";
+    private static final String NEO4J_DB_FOLDER = "C:\\Users\\forte\\Documents\\Neo4j\\";
+    private static final String NEO4J_DB_FULL_PATH = NEO4J_DB_FOLDER + "test.graphdb";
     private static final String QUERY_GET_PRIORITY_NODES = "match(w:WORD) WHERE w.priority > 1 RETURN w ORDER BY w.priority DESC LIMIT {numLimit}";
     private static final String QUERY_MERGE_NEW_NODES = "MERGE(w:WORD {lemma:{lemmaStr}}) ON CREATE SET w.priority = {priority} return w";
     private static final int NEW_WORDS_PRIORITY = 10;
@@ -52,9 +50,9 @@ public class LenguajeDotComDownloader {
 
         System.out.println("Starting downloader of Lenguaje.com");
 
-        graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(NEO4J_DB_PATH)
-                .setConfig( GraphDatabaseSettings.pagecache_memory, "1024M" )
-                .setConfig( GraphDatabaseSettings.string_block_size, "60" )
+        graphDb = new GraphDatabaseFactory().newEmbeddedDatabaseBuilder(NEO4J_DB_FULL_PATH)
+                .setConfig(GraphDatabaseSettings.pagecache_memory, "1024M")
+                .setConfig(GraphDatabaseSettings.string_block_size, "60")
                 .setConfig(GraphDatabaseSettings.array_block_size, "300")
                 .newGraphDatabase();
         registerShutdownHook(graphDb);
@@ -146,19 +144,44 @@ public class LenguajeDotComDownloader {
         }
     }
 
-    private static void registerShutdownHook( final GraphDatabaseService graphDb )
-    {
+    private static org.neo4j.graphdb.Node findAndRepairRepeatedNodes(Label label, String key, Object value) {
+        org.neo4j.graphdb.Node node;
+        try {
+            node = graphDb.findNode(label, key, value);
+        } catch (MultipleFoundException e) {
+            System.err.println("Duplicated nodes!! Fixing right now");
+
+            ResourceIterator<org.neo4j.graphdb.Node> iterator = graphDb.findNodes(label, key, value);
+            node = iterator.next();
+
+            while(iterator.hasNext()) {
+                org.neo4j.graphdb.Node repeatedNode = iterator.next();
+                Iterable<Relationship> relationships = repeatedNode.getRelationships();
+                final org.neo4j.graphdb.Node finalNode = node;
+                relationships.forEach(relationshipOfRepeated -> {
+                    org.neo4j.graphdb.Node otherNodeOfRepeatedNode = relationshipOfRepeated.getOtherNode(repeatedNode);
+                    Relationship copiedRelationShip = otherNodeOfRepeatedNode.createRelationshipTo(finalNode, relationshipOfRepeated.getType());
+                    copiedRelationShip.setProperty("lemma", relationshipOfRepeated.getProperty("lemma"));
+
+                    relationshipOfRepeated.delete();
+                });
+                repeatedNode.delete();
+            }
+        }
+
+        return node;
+    }
+
+    private static void registerShutdownHook(final GraphDatabaseService graphDb) {
         // Registers a shutdown hook for the Neo4j instance so that it
         // shuts down nicely when the VM exits (even if you "Ctrl-C" the
         // running application).
-        Runtime.getRuntime().addShutdownHook( new Thread()
-        {
+        Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
-            public void run()
-            {
+            public void run() {
                 graphDb.shutdown();
             }
-        } );
+        });
     }
 
     public static List<String> getPriorityWords(int num) {
@@ -192,7 +215,7 @@ public class LenguajeDotComDownloader {
                     System.err.println("Interrupted thread!!");
                 }
             } catch (IOException e) {
-                System.err.println("Error downloading synonyms for word: "+word);
+                System.err.println("Error downloading synonyms for word: " + word);
                 try {
                     Thread.sleep(MILLIS_SLEEP_AFTER_ERROR);
                 } catch (InterruptedException e1) {
@@ -209,9 +232,9 @@ public class LenguajeDotComDownloader {
         List<SynonymSense> lstSynonymSense = new ArrayList<>();
         List<AntonymSense> lstAntonyms = new ArrayList<>();
 
-        Document doc = Jsoup.connect(BASE_URL+mainWord).userAgent(USER_AGENT).timeout(TIMEOUT).get();
+        Document doc = Jsoup.connect(BASE_URL + mainWord).userAgent(USER_AGENT).timeout(TIMEOUT).get();
 
-        FileUtils.writeAllText(doc.outerHtml(), HTML_FOLDER+mainWord+System.currentTimeMillis()+".html");
+        FileUtils.writeAllText(doc.outerHtml(), HTML_FOLDER + mainWord + System.currentTimeMillis() + ".html");
 
         Elements elLemma = doc.select(".Lemma");
 
@@ -221,13 +244,13 @@ public class LenguajeDotComDownloader {
             String currentTag = null;
             String currentLemma = null;
 
-            for (int i=1;i<lstNode.size()-3;i++) {
+            for (int i = 1; i < lstNode.size() - 3; i++) {
 
                 Node node = lstNode.get(i);
 
                 if (node instanceof TextNode && !((TextNode) node).text().equals("")) {
                     // Lemma tag
-                    currentTag = ((TextNode) node).getWholeText().replace(" - ","");
+                    currentTag = ((TextNode) node).getWholeText().replace(" - ", "");
                 } else {
 
                     String classNode = node.attr("class");
@@ -268,7 +291,7 @@ public class LenguajeDotComDownloader {
 
         }
 
-        return new WordResults(mainWord,lstSynonymSense,lstAntonyms);
+        return new WordResults(mainWord, lstSynonymSense, lstAntonyms);
     }
 
 }
