@@ -76,7 +76,7 @@ public class LenguajeDotComDownloader {
         try (Transaction tx = graphDb.beginTx()) {
 
             Long tInit = System.currentTimeMillis();
-            org.neo4j.graphdb.Node mainWordNode = graphDb.findNode(OwnLabels.WORD, "lemma", wordResults.getWord());
+            org.neo4j.graphdb.Node mainWordNode = findAndRepairRepeatedNodes(OwnLabels.WORD, "lemma", wordResults.getWord());
 //            System.out.println("--- time finding main word: "+(System.currentTimeMillis() - tInit));
 
             for (SynonymSense sense : lstSynonymSense) {
@@ -100,7 +100,7 @@ public class LenguajeDotComDownloader {
 //                    System.out.println("------ time executing QUERY_MERGE_NEW_NODES: " + (System.currentTimeMillis() - tInitAux));
 
 //                    tInitAux = System.currentTimeMillis();
-                    org.neo4j.graphdb.Node wordNode = graphDb.findNode(OwnLabels.WORD, "lemma", s);
+                    org.neo4j.graphdb.Node wordNode = findAndRepairRepeatedNodes(OwnLabels.WORD, "lemma", s);
 //                    System.out.println("------ time finding new word node: " + (System.currentTimeMillis() - tInitAux));
 
                     // Creating relations
@@ -125,7 +125,7 @@ public class LenguajeDotComDownloader {
 //                System.out.println("------ time executing QUERY_MERGE_NEW_NODES: " + (System.currentTimeMillis() - tInitAux));
 
 //                tInitAux = System.currentTimeMillis();
-                org.neo4j.graphdb.Node wordNode = graphDb.findNode(OwnLabels.WORD, "lemma", antonymSense.getAntonym());
+                org.neo4j.graphdb.Node wordNode = findAndRepairRepeatedNodes(OwnLabels.WORD, "lemma", antonymSense.getAntonym());
 //                System.out.println("------ time finding new word node: " + (System.currentTimeMillis() - tInitAux));
 
 //                tInitAux = System.currentTimeMillis();
