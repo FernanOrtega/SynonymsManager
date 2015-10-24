@@ -29,16 +29,16 @@ public class LenguajeDotComDownloader {
     // Downloader
     private static final String BASE_URL = "http://lenguaje.com/cgi-bin/Thesauro.exe?edition_field=";
     private static final int DEFAULT_BATCH = 50;
-    private static final String HTML_FOLDER = "D:\\lenguaje.com\\";
+    private static final String HTML_FOLDER = "C:\\lenguaje.com\\";
 
     // Neo4j
-    private static final String NEO4J_DB_FOLDER = "C:\\Users\\forte\\Documents\\Neo4j\\";
-    private static final String NEO4J_DB_FULL_PATH = NEO4J_DB_FOLDER + "test.graphdb";
+    private static final String NEO4J_DB_FOLDER = "C:\\Users\\fogallego\\Documents\\Neo4j\\";
+    private static final String NEO4J_DB_FULL_PATH = NEO4J_DB_FOLDER + "semanticdb.graphdb";
     private static final String QUERY_GET_PRIORITY_NODES = "match(w:WORD) WHERE w.priority > 1 RETURN w ORDER BY w.priority DESC LIMIT {numLimit}";
     private static final String QUERY_MERGE_NEW_NODES = "MERGE(w:WORD {lemma:{lemmaStr}}) ON CREATE SET w.priority = {priority} return w";
     private static final int NEW_WORDS_PRIORITY = 10;
     public static final int MILLIS_SLEEP_AFTER_ERROR = 30000;
-    public static final int MILLIS_SLEEP_AFTER_DOWNLOAD = 10;
+    public static final int MILLIS_SLEEP_AFTER_DOWNLOAD = 5000;
     private static GraphDatabaseService graphDb;
 
     public static void main(String[] args) {
@@ -161,7 +161,9 @@ public class LenguajeDotComDownloader {
                 relationships.forEach(relationshipOfRepeated -> {
                     org.neo4j.graphdb.Node otherNodeOfRepeatedNode = relationshipOfRepeated.getOtherNode(repeatedNode);
                     Relationship copiedRelationShip = otherNodeOfRepeatedNode.createRelationshipTo(finalNode, relationshipOfRepeated.getType());
-                    copiedRelationShip.setProperty("lemma", relationshipOfRepeated.getProperty("lemma"));
+                    if (relationshipOfRepeated.hasProperty("lemma")) {
+                        copiedRelationShip.setProperty("lemma", relationshipOfRepeated.getProperty("lemma"));
+                    }
 
                     relationshipOfRepeated.delete();
                 });
